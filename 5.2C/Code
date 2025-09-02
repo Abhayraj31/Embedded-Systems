@@ -1,0 +1,37 @@
+import RPi.GPIO as GPIO
+import tkinter as tk
+
+# Pin setup
+LED_PIN = 18
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
+# Setup pin as PWM output
+GPIO.setup(LED_PIN, GPIO.OUT)
+pwm = GPIO.PWM(LED_PIN, 1000)  # 1kHz frequency
+pwm.start(0)  # LED starts off
+
+# Update function for slider
+def update_led(value):
+    duty_cycle = int(value)   # Convert slider value to int
+    pwm.ChangeDutyCycle(duty_cycle)
+
+# GUI setup
+root = tk.Tk()
+root.title("LED Intensity Control")
+
+slider = tk.Scale(root,
+                  from_=0, to=100,
+                  orient="horizontal",
+                  label="LED Brightness",
+                  command=update_led)
+slider.pack(padx=20, pady=20)
+
+# Clean up GPIO on window close
+def on_close():
+    pwm.stop()
+    GPIO.cleanup()
+    root.destroy()
+
+root.protocol("WM_DELETE_WINDOW", on_close)
+root.mainloop()
