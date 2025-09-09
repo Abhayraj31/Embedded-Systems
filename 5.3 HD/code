@@ -1,0 +1,151 @@
+#include <WiFiNINA.h>
+
+char ssid[] = "A";
+char pass[] = "qwertyui";
+
+const char FIREBASE_HOST[] = "hd-ba944-default-rtdb.firebaseio.com";
+const int FIREBASE_PORT = 443;  // HTTPS
+
+// pins
+const int BLUE_PIN = 6;
+const int RED_PIN = 7;
+const int GREEN_PIN = 8;
+
+unsigned long lastTimestamp = 0;
+unsigned long pollInterval = 1200;  // ms
+unsigned long lastPoll = 0;
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial) { ; }
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+  digitalWrite(RED_PIN, LOW);
+  digitalWrite(GREEN_PIN, LOW);
+  digitalWrite(BLUE_PIN, LOW);
+
+  connectWiFi();
+}
+void loop() {
+  if (millis() - lastPoll >= pollInterval) {
+    lastPoll = millis();
+    String body = firebaseGet("/leds.json");
+    if (body.length() > 0) {
+      processLeds(body);
+    }
+  }
+}
+
+// connect to WiFi
+void connectWiFi() {
+  Serial.print("Connecting to WiFi ");
+  Serial.print(ssid);
+  WiFi.begin(ssid, pass);
+  unsigned long t0 = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) {
+    delay(500);
+    Serial.print('.');
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nWiFi connect failed");
+  }
+}
+
+// perform an HTTPS GET to firebaseHost + path
+String firebaseGet(const char *path) {
+  WiFiSSLClient client;
+  if (!client.connect(FIREBASE_HOST, FIREBASE_PORT)) {
+    Serial.println("Connection to Firebase failed");
+    return "";
+  }
+
+  // send GET request
+  client.print(String("GET ") + path + " HTTP/1.1\r\n" + String("Host: ") + FIREBASE_HOST + "\r\n" + "Connection: close\r\n\r\n");
+
+  unsigned long timeout = millis() + 7000;
+  while (client.available() == 0) {
+    if (millis() > timeout) {
+      client.stop();
+      Serial.println(">>> Client Timeout");
+      return "";
+    }
+  }
+
+  // skip headers, read body
+  String line;
+  bool inBody = false;
+  String body = "";
+  while (client.connected() || client.available()) {
+    line = client.readStringUntil('\n');
+    if (!inBody && line == "\r") {
+      inBody = true;  // blank line -> body follows
+      continue;
+    }
+    if (inBody) {
+      body += line + "\n";
+    }
+  }
+  client.stop();
+
+  // find first '{' in body in case of extra chars
+  int p = body.indexOf('{');
+  if (p >= 0) body = body.substring(p);
+  body.trim();
+  Serial.println("Firebase body: " + body);
+  return body;
+}
+
+// crude parser: find timestamp and color strings
+void processLeds(const String &body) {
+  // crude JSON parsing
+  bool red = body.indexOf("\"red\":true") > 0;
+  bool green = body.indexOf("\"green\":true") > 0;
+  bool blue = body.indexOf("\"blue\":true") > 0;
+
+  digitalWrite(RED_PIN, red ? HIGH : LOW);
+  digitalWrite(GREEN_PIN, green ? HIGH : LOW);
+  digitalWrite(BLUE_PIN, blue ? HIGH : LOW);
+
+  Serial.print("LED states -> Red: ");
+  Serial.print(red);
+  Serial.print(" Green: ");
+  Serial.print(green);
+  Serial.print(" Blue: ");
+  Serial.println(blue);
+}
+
+
+void toggleLED(const String &color) {
+  int pin = pinFor(color);
+  if (pin < 0) return;
+  int cur = digitalRead(pin);
+  digitalWrite(pin, !cur);
+  Serial.print("Toggled ");
+  Serial.print(color);
+  Serial.print(" -> ");
+  Serial.println(!cur);
+}
+
+void setLedFor(const String &color, unsigned long ms) {
+  int pin = pinFor(color);
+  if (pin < 0) return;
+  digitalWrite(pin, HIGH);
+  delay(ms);
+  digitalWrite(pin, LOW);
+  Serial.print("Set ");
+  Serial.print(color);
+  Serial.print(" for ");
+  Serial.print(ms);
+  Serial.println(" ms");
+}
+
+int pinFor(const String &color) {
+  if (color == "red") return RED_PIN;
+  if (color == "green") return GREEN_PIN;
+  if (color == "blue") return BLUE_PIN;
+  return -1;
+}
