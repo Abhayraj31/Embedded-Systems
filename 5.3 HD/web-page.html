@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Remote Light — Control</title>
+  <style>
+    body { font-family: system-ui, Arial; padding: 20px; }
+    .row { margin-bottom: 12px; }
+    label { margin-right: 8px; }
+    input[type="number"] { width: 80px; }
+  </style>
+</head>
+<body>
+  <h2>Remote Light Controller</h2>
+
+  <div class="row">
+  <input type="button" value="Toggle RED" onclick="send('red')">
+</div>
+<div class="row">
+  <input type="button" value="Toggle GREEN" onclick="send('green')">
+</div>
+<div class="row">
+  <input type="button" value="Toggle BLUE" onclick="send('blue')">
+</div>
+
+
+  <p id="status"></p>
+
+<script>
+const FIREBASE_URL = "https://hd-ba944-default-rtdb.firebaseio.com/leds.json";
+
+// Send toggle command
+async function send(color) {
+  try {
+    // Read the current state first
+    const current = await fetch(FIREBASE_URL).then(res => res.json());
+    const newState = !current[color]; // flip true/false
+
+    // Update only this LED
+    const res = await fetch(FIREBASE_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [color]: newState })
+    });
+
+    document.getElementById('status').innerText =
+      `Toggled ${color.toUpperCase()} -> ${newState}`;
+  } catch (err) {
+    document.getElementById('status').innerText = 'Error: ' + err;
+  }
+}
+</script>
+
+</body>
+</html>
+
