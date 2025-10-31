@@ -1,60 +1,45 @@
-#include <Arduino.h>
+const int buttonPin = 3;
+const int pirPin    = 2;
+ const int led1Pin   = 7;
+ const int led2Pin   = 8;
+ //LED states
+volatile bool led1State = LOW;
+volatile bool led2State = LOW;
 
-// Pin assignments
-const int buttonPin = 3;   // Push button
-const int pirPin    = 2;   // PIR motion sensor
-const int ledPin    = 6;   // Single LED controlled by both
-
-// State for LED
-volatile bool ledState = LOW;
-
-// Event flags (set in ISR, cleared in loop)
-volatile bool buttonEvent = false;
-volatile bool motionEvent = false;
-
-// ISR for button press
+// Interrupt Service Routine for button
 void handleButton() {
-  ledState = !ledState;           // Toggle LED state
-  digitalWrite(ledPin, ledState);
-  buttonEvent = true;             // Flag event for loop()
+  led1State = !led1State;  // Toggle LED1 state
+  digitalWrite(led1Pin, led1State);
+  Serial.println("Button pressed! LED1 toggled.");
 }
 
-// ISR for PIR motion detection
-void handleMotion() {
-  ledState = !ledState;           // Toggle LED state
-  digitalWrite(ledPin, ledState);
-  motionEvent = true;             // Flag event for loop()
+// Interrupt Service Routine for PIR sensor
+void handlePIR() {
+  led2State = !led2State;  // Toggle LED2 state
+  digitalWrite(led2Pin, led2State);
+  Serial.println("Motion detected! LED2 toggled.");
 }
 
 void setup() {
-  // Setup LED
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  Serial.begin(9600);
 
-  // Setup input pins
-  pinMode(buttonPin, INPUT_PULLUP);  // button: pressed → LOW
-  pinMode(pirPin, INPUT);            // PIR digital output
+  // Setup LEDs
+  pinMode(led1Pin, OUTPUT);
+  pinMode(led2Pin, OUTPUT);
 
-  // Serial for debugging
-  Serial.begin(115200);
-  delay(1000);
-  Serial.println("System Ready...");
+  // Setup button with internal pull-up
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  // Setup PIR sensor as input
+  pinMode(pirPin, INPUT);
 
   // Attach interrupts
-  attachInterrupt(digitalPinToInterrupt(buttonPin), handleButton, FALLING);
-  attachInterrupt(digitalPinToInterrupt(pirPin), handleMotion, RISING);
+  attachInterrupt(digitalPinToInterrupt(buttonPin), handleButton, FALLING); // button press (goes LOW)
+  attachInterrupt(digitalPinToInterrupt(pirPin), handlePIR, RISING);        // PIR goes HIGH when motion detected
+
+  Serial.println("System ready. Waiting for events...");
 }
 
 void loop() {
-  // Check if button interrupt occurred
-  if (buttonEvent) {
-    buttonEvent = false;
-    Serial.println("Button Interrupt: LED Toggled");
-  }
-
-  // Check if motion interrupt occurred
-  if (motionEvent) {
-    motionEvent = false;
-    Serial.println("Motion Interrupt: LED Toggled");
-  }
+  // Nothing here - everything handled by interrupts
 }
