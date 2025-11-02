@@ -1,9 +1,3 @@
-/*
- * Arduino Nano 33 IoT Sketch
- * Receives gesture names from Raspberry Pi via USB Serial (Serial object)
- * and displays them on a 16x2 I2C LCD.
- */
-
 // =======================================================
 // === 1. INCLUDE YOUR DISPLAY LIBRARY(IES) HERE ===
 #include <Wire.h>             // Needed for I2C communication
