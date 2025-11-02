@@ -25,24 +25,21 @@ void setup() {
   // =======================================================
   // === 3. INITIALIZE YOUR DISPLAY HERE ===
   lcd.init();           // Initialize the LCD
-  lcd.backlight();      // Turn on the backlight (remove if you don't have one or it's always on)
+  lcd.backlight();      // Turn on the backlight
   lcd.setCursor(0, 0);  // Set cursor to the first column, first row
   lcd.print("Waiting for Pi.."); // Initial message
   delay(1000);        // Display message briefly
   // =======================================================
-
-  // Optional: Serial Monitor message (only works if Pi is disconnected)
-  // Serial.println("Arduino Ready. Waiting for gestures...");
 }
 
 void loop() {
-  // Check if data is available from the Raspberry Pi
+  // Checks if data is available from the Raspberry Pi
   if (Serial.available() > 0) {
-    // Read the incoming string until newline character '\n'
+    // Reads the incoming string until newline character '\n'
     receivedGesture = Serial.readStringUntil('\n');
     receivedGesture.trim(); // Remove any extra whitespace
 
-    // Only update if a valid gesture was received AND it's different
+    // Only updates if a valid gesture was received AND it's different
     if (receivedGesture.length() > 0 && receivedGesture != lastDisplayedGesture) {
 
       // =======================================================
@@ -53,10 +50,6 @@ void loop() {
       // =======================================================
 
       lastDisplayedGesture = receivedGesture; // Remember what was displayed
-
-      // Optional: Debugging print (if Pi disconnected)
-      // Serial.print("Displayed: ");
-      // Serial.println(receivedGesture);
     }
   }
 }
